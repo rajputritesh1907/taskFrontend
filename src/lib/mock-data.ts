@@ -1,4 +1,4 @@
-import { Task, DashboardStats, CategoryStats } from './types';
+import { Task, DashboardStats, CategoryStats, TeamMember } from './types';
 
 export const mockTasks: Task[] = [
   {
@@ -89,4 +89,36 @@ export const mockCategoryStats: CategoryStats[] = [
   { name: 'Design', count: 1, color: '#F59E0B' },
   { name: 'Testing', count: 1, color: '#EF4444' },
   { name: 'Documentation', count: 1, color: '#8B5CF6' }
+];
+
+export const mockTeamMembers: TeamMember[] = [
+  {
+    id: '1',
+    name: 'Alex Morgan',
+    role: 'Product Designer',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex',
+    status: 'online'
+  },
+  {
+    id: '2',
+    name: 'Sarah Chen',
+    role: 'Frontend Dev',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
+    status: 'busy'
+  },
+  {
+    id: '3',
+    name: 'Mike Ross',
+    role: 'Backend Dev',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike',
+    status: 'offline',
+    lastActive: new Date('2024-12-10T10:00:00')
+  },
+  {
+    id: '4',
+    name: 'Emily Davis',
+    role: 'QA Engineer',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emily',
+    status: 'away'
+  }
 ];

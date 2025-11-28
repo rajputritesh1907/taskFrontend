@@ -27,3 +27,12 @@ export interface CategoryStats {
   count: number;
   color: string;
 }
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  role: string;
+  avatar: string;
+  status: 'online' | 'offline' | 'busy' | 'away';
+  lastActive?: Date;
+}
