@@ -1,65 +1,165 @@
-import Image from "next/image";
+import { StatsCard } from '@/components/stats-card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  CheckSquare,
+  Clock,
+  AlertTriangle,
+  TrendingUp,
+  Calendar,
+  Plus,
+  MoreHorizontal
+} from 'lucide-react';
+import { mockDashboardStats, mockTasks, mockCategoryStats } from '@/lib/mock-data';
+import { format } from 'date-fns';
+import Link from 'next/link';
 
-export default function Home() {
+export default function Dashboard() {
+  const recentTasks = mockTasks.slice(0, 5);
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent': return 'bg-red-500';
+      case 'high': return 'bg-orange-500';
+      case 'medium': return 'bg-yellow-500';
+      case 'low': return 'bg-green-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'done': return 'bg-green-500';
+      case 'in-progress': return 'bg-blue-500';
+      case 'todo': return 'bg-gray-500';
+      case 'cancelled': return 'bg-red-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div className="p-4 sm:p-6 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+            Dashboard
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Welcome back! Here's what's happening with your tasks.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+        <Button asChild className="w-full sm:w-auto">
+          <Link href="/tasks/new">
+            <Plus className="h-4 w-4 mr-2" />
+            New Task
+          </Link>
+        </Button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatsCard
+          title="Total Tasks"
+          value={mockDashboardStats.totalTasks}
+          description="All tasks in your workspace"
+          icon={CheckSquare}
+          trend={{ value: 12, isPositive: true }}
+        />
+        <StatsCard
+          title="Completed"
+          value={mockDashboardStats.completedTasks}
+          description="Tasks finished this month"
+          icon={TrendingUp}
+          trend={{ value: 8, isPositive: true }}
+        />
+        <StatsCard
+          title="In Progress"
+          value={mockDashboardStats.inProgressTasks}
+          description="Currently working on"
+          icon={Clock}
+        />
+        <StatsCard
+          title="Overdue"
+          value={mockDashboardStats.overdueTasks}
+          description="Tasks past due date"
+          icon={AlertTriangle}
+          trend={{ value: 5, isPositive: false }}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Tasks */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Recent Tasks</CardTitle>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/tasks">View All</Link>
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {recentTasks.map((task) => (
+              <div key={task.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${getStatusColor(task.status)}`} />
+                  <div>
+                    <h4 className="font-medium text-sm">{task.title}</h4>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="secondary" className="text-xs">
+                        {task.category}
+                      </Badge>
+                      {task.dueDate && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {format(task.dueDate, 'MMM dd')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Category Breakdown */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Tasks by Category</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {mockCategoryStats.map((category) => (
+              <div key={category.name} className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-4 h-4 rounded-full"
+                    style={{ backgroundColor: category.color }}
+                  />
+                  <span className="font-medium">{category.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {category.count} tasks
+                  </span>
+                  <div className="w-20 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div
+                      className="h-2 rounded-full"
+                      style={{
+                        backgroundColor: category.color,
+                        width: `${(category.count / mockDashboardStats.totalTasks) * 100}%`
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
