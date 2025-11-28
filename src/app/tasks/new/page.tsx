@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Save, X, Plus } from 'lucide-react';
+import { ArrowLeft, Save, X, Plus, Calendar, Clock, AlertCircle, HelpCircle } from 'lucide-react';
 import { Task, Status, Priority } from '@/lib/types';
 import Link from 'next/link';
 
@@ -76,7 +76,7 @@ function NewTaskForm() {
   };
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-6 max-w-[1600px] mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="sm" asChild>
@@ -95,142 +95,232 @@ function NewTaskForm() {
         </div>
       </div>
 
-      {/* Form */}
-      <Card>
-        <CardContent className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Title */}
-            <div className="space-y-2">
-              <Label htmlFor="title">Title *</Label>
-              <Input
-                id="title"
-                placeholder="Enter task title..."
-                value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                required
-              />
-            </div>
-
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Enter task description..."
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                rows={3}
-              />
-            </div>
-
-            {/* Status and Priority */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value: Status) => setFormData(prev => ({ ...prev, status: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todo">To Do</SelectItem>
-                    <SelectItem value="in-progress">In Progress</SelectItem>
-                    <SelectItem value="done">Done</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Priority</Label>
-                <Select
-                  value={formData.priority}
-                  onValueChange={(value: Priority) => setFormData(prev => ({ ...prev, priority: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Category and Due Date */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Input
-                  id="category"
-                  placeholder="e.g., Frontend, Backend, Design"
-                  value={formData.category}
-                  onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="dueDate">Due Date</Label>
-                <Input
-                  id="dueDate"
-                  type="date"
-                  value={formData.dueDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            {/* Tags */}
-            <div className="space-y-2">
-              <Label>Tags</Label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Add a tag..."
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  className="flex-1"
-                />
-                <Button type="button" onClick={addTag} variant="outline">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              {formData.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {formData.tags.map(tag => (
-                    <Badge key={tag} variant="secondary" className="flex items-center gap-1">
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={() => removeTag(tag)}
-                        className="ml-1 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-full p-0.5"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* Form Column */}
+        <div className="xl:col-span-2">
+          <Card>
+            <CardContent className="p-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Title */}
+                <div className="space-y-2">
+                  <Label htmlFor="title">Title *</Label>
+                  <Input
+                    id="title"
+                    placeholder="Enter task title..."
+                    value={formData.title}
+                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                    required
+                  />
                 </div>
-              )}
-            </div>
 
-            {/* Actions */}
-            <div className="flex gap-3 pt-4">
-              <Button type="submit" disabled={isSubmitting || !formData.title.trim()}>
-                <Save className="h-4 w-4 mr-2" />
-                {isSubmitting ? 'Creating...' : 'Create Task'}
-              </Button>
-              <Button type="button" variant="outline" asChild>
-                <Link href="/tasks">Cancel</Link>
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+                {/* Description */}
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="Enter task description..."
+                    value={formData.description}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    rows={4}
+                  />
+                </div>
+
+                {/* Status and Priority */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <Select
+                      value={formData.status}
+                      onValueChange={(value: Status) => setFormData(prev => ({ ...prev, status: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todo">To Do</SelectItem>
+                        <SelectItem value="in-progress">In Progress</SelectItem>
+                        <SelectItem value="done">Done</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Priority</Label>
+                    <Select
+                      value={formData.priority}
+                      onValueChange={(value: Priority) => setFormData(prev => ({ ...prev, priority: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="urgent">Urgent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Category and Due Date */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Category</Label>
+                    <Input
+                      id="category"
+                      placeholder="e.g., Frontend, Backend, Design"
+                      value={formData.category}
+                      onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="dueDate">Due Date</Label>
+                    <Input
+                      id="dueDate"
+                      type="date"
+                      value={formData.dueDate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, dueDate: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Tags */}
+                <div className="space-y-2">
+                  <Label>Tags</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Add a tag..."
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      className="flex-1"
+                    />
+                    <Button type="button" onClick={addTag} variant="outline">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {formData.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {formData.tags.map(tag => (
+                        <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                          {tag}
+                          <button
+                            type="button"
+                            onClick={() => removeTag(tag)}
+                            className="ml-1 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-full p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-4">
+                  <Button type="submit" disabled={isSubmitting || !formData.title.trim()}>
+                    <Save className="h-4 w-4 mr-2" />
+                    {isSubmitting ? 'Creating...' : 'Create Task'}
+                  </Button>
+                  <Button type="button" variant="outline" asChild>
+                    <Link href="/tasks">Cancel</Link>
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar Column */}
+        <div className="space-y-6">
+          {/* Preview Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Task Preview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="p-4 border rounded-lg bg-white dark:bg-gray-950 shadow-sm">
+                <div className="flex items-start justify-between mb-3">
+                  <Badge variant={
+                    formData.status === 'done' ? 'default' :
+                      formData.status === 'in-progress' ? 'secondary' : 'outline'
+                  }>
+                    {formData.status === 'todo' ? 'To Do' :
+                      formData.status === 'in-progress' ? 'In Progress' :
+                        formData.status === 'done' ? 'Done' : 'Cancelled'}
+                  </Badge>
+                  <Badge className={`${formData.priority === 'urgent' ? 'bg-red-500' :
+                      formData.priority === 'high' ? 'bg-orange-500' :
+                        formData.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
+                    } text-white border-0`}>
+                    {formData.priority}
+                  </Badge>
+                </div>
+
+                <h3 className="font-semibold text-lg mb-2 break-words">
+                  {formData.title || 'Task Title'}
+                </h3>
+
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-3 break-words">
+                  {formData.description || 'Task description will appear here...'}
+                </p>
+
+                <div className="flex items-center gap-4 text-xs text-gray-500">
+                  {formData.category && (
+                    <span className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                      {formData.category}
+                    </span>
+                  )}
+                  {formData.dueDate && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {formData.dueDate}
+                    </span>
+                  )}
+                </div>
+
+                {formData.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-3 pt-3 border-t">
+                    {formData.tags.map(tag => (
+                      <span key={tag} className="text-[10px] bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 px-1.5 py-0.5 rounded">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Guidelines Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <HelpCircle className="h-4 w-4" />
+                Guidelines
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm text-gray-600 dark:text-gray-400">
+              <div className="space-y-1">
+                <p className="font-medium text-gray-900 dark:text-white">Be Specific</p>
+                <p>Clear titles help your team understand the task immediately.</p>
+              </div>
+              <div className="space-y-1">
+                <p className="font-medium text-gray-900 dark:text-white">Set Realistic Deadlines</p>
+                <p>Give enough time for review and testing.</p>
+              </div>
+              <div className="space-y-1">
+                <p className="font-medium text-gray-900 dark:text-white">Use Tags</p>
+                <p>Tags help in filtering and organizing tasks effectively.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
