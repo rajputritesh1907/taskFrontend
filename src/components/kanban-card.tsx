@@ -22,7 +22,7 @@ interface KanbanCardProps {
   isDragging?: boolean;
 }
 
-export function KanbanCard({ task, isDragging = false }: KanbanCardProps) {
+export function KanbanCard({ task, isDragging = false }: { task: any, isDragging?: boolean }) {
   const {
     attributes,
     listeners,
@@ -30,7 +30,7 @@ export function KanbanCard({ task, isDragging = false }: KanbanCardProps) {
     transform,
     transition,
     isDragging: isSortableDragging,
-  } = useSortable({ id: task.id });
+  } = useSortable({ id: task._id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -49,22 +49,26 @@ export function KanbanCard({ task, isDragging = false }: KanbanCardProps) {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'done': return <CheckCircle className="h-3 w-3 text-green-500" />;
-      case 'in-progress': return <PlayCircle className="h-3 w-3 text-blue-500" />;
+      case 'done':
+      case 'completed': return <CheckCircle className="h-3 w-3 text-green-500" />;
+      case 'in-progress':
+      case 'active': return <PlayCircle className="h-3 w-3 text-blue-500" />;
       case 'cancelled': return <XCircle className="h-3 w-3 text-red-500" />;
+      case 'on-hold': return <Clock className="h-3 w-3 text-yellow-500" />;
       default: return <Clock className="h-3 w-3 text-gray-500" />;
     }
   };
 
-  const isOverdue = task.dueDate && task.dueDate < new Date() && task.status !== 'done';
+  const isProject = 'deadline' in task;
+  const date = isProject ? task.deadline : task.dueDate;
+  const isOverdue = date && date < new Date() && task.status !== 'done' && task.status !== 'completed';
 
   return (
     <Card
       ref={setNodeRef}
       style={style}
-      className={`cursor-grab active:cursor-grabbing hover:shadow-md transition-all ${
-        isDragging || isSortableDragging ? 'opacity-50 shadow-lg rotate-2' : ''
-      } ${isOverdue ? 'border-red-300 bg-red-50 dark:bg-red-900/10' : ''}`}
+      className={`cursor-grab active:cursor-grabbing hover:shadow-md transition-all ${isDragging || isSortableDragging ? 'opacity-50 shadow-lg rotate-2' : ''
+        } ${isOverdue ? 'border-red-300 bg-red-50 dark:bg-red-900/10' : ''}`}
       {...attributes}
       {...listeners}
     >
@@ -74,9 +78,16 @@ export function KanbanCard({ task, isDragging = false }: KanbanCardProps) {
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-2">
               {getStatusIcon(task.status)}
-              <Badge className={`${getPriorityColor(task.priority)} text-white border-0 text-xs`}>
-                {task.priority}
-              </Badge>
+              {!isProject && (
+                <Badge className={`${getPriorityColor(task.priority)} text-white border-0 text-xs`}>
+                  {task.priority}
+                </Badge>
+              )}
+              {isProject && (
+                <Badge variant="outline" className="text-xs">
+                  Project
+                </Badge>
+              )}
             </div>
             <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
               <MoreHorizontal className="h-3 w-3" />
@@ -106,12 +117,17 @@ export function KanbanCard({ task, isDragging = false }: KanbanCardProps) {
               {isOverdue && (
                 <AlertCircle className="h-3 w-3 text-red-500" />
               )}
+              {isProject && task.teamLeader && (
+                <span className="text-xs text-muted-foreground">
+                  {task.teamLeader.name}
+                </span>
+              )}
             </div>
 
-            {task.dueDate && (
+            {date && (
               <div className="flex items-center gap-1 text-xs text-gray-500">
                 <Calendar className="h-3 w-3" />
-                {format(task.dueDate, 'MMM dd')}
+                {format(date, 'MMM dd')}
               </div>
             )}
           </div>

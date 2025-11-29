@@ -10,9 +10,11 @@ import {
   Settings,
   Moon,
   Sun,
-  Plus
+  Plus,
+  LogOut
 } from 'lucide-react';
 import { useTheme } from '@/lib/theme-context';
+import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 
 const navigation = [
@@ -25,6 +27,7 @@ const navigation = [
 export function Sidebar() {
   const pathname = usePathname();
   const { theme, toggleTheme, mounted } = useTheme();
+  const { logout, user } = useAuth();
 
   return (
     <div className="flex h-full w-64 flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 animate-slide-in">
@@ -43,7 +46,18 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-4 py-6">
         {navigation.map((item) => {
-          const Icon = item.icon;
+          let name = item.name;
+          let Icon = item.icon;
+
+          if (user?.role === 'manager') {
+            if (item.name === 'All Tasks') {
+              name = 'All Projects';
+              Icon = CheckSquare; // Or Briefcase if imported
+            } else if (item.name === 'Kanban') {
+              name = 'Project Board';
+            }
+          }
+
           const isActive = pathname === item.href;
 
           return (
@@ -58,7 +72,7 @@ export function Sidebar() {
               )}
             >
               <Icon className="h-5 w-5" />
-              {item.name}
+              {name}
             </Link>
           );
         })}
@@ -84,6 +98,17 @@ export function Sidebar() {
             <Sun className="h-4 w-4" />
           )}
           {mounted && theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+        </Button>
+
+        {/* Logout Button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => logout()}
+          className="w-full justify-start gap-3 mt-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+        >
+          <LogOut className="h-4 w-4" />
+          Log Out
         </Button>
       </div>
     </div>

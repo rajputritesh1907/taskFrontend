@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,11 +16,14 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Save, X, Plus, Calendar, Clock, AlertCircle, HelpCircle } from 'lucide-react';
-import { Task, Status, Priority } from '@/lib/types';
+import { Task, Status, Priority, Project, User } from '@/lib/types';
 import Link from 'next/link';
+import api from '@/lib/api';
+import { useAuth } from '@/context/auth-context';
 
 function NewTaskForm() {
   const router = useRouter();
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const initialStatus = (searchParams.get('status') as Status) || 'todo';
 
@@ -32,23 +35,53 @@ function NewTaskForm() {
     category: '',
     dueDate: '',
     tags: [] as string[],
+    projectId: '',
+    assignedTo: '',
   });
 
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectMembers, setProjectMembers] = useState<any[]>([]); // Using any for now as User type might not match populated member exactly
   const [newTag, setNewTag] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      // Allow team leaders AND co-operators (who might be TLs) to fetch projects
+      if (user?.role === 'team-leader' || user?.role === 'co-operator') {
+        try {
+          const { data } = await api.get('/projects');
+          setProjects(data);
+        } catch (error) {
+          console.error('Failed to fetch projects', error);
+        }
+      }
+    };
+    fetchProjects();
+  }, [user]);
+
+  const handleProjectChange = (projectId: string) => {
+    setFormData(prev => ({ ...prev, projectId, assignedTo: '' }));
+    const project = projects.find(p => p._id === projectId);
+    if (project && project.members) {
+      setProjectMembers(project.members);
+    } else {
+      setProjectMembers([]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // In a real app, this would save to the database
-    console.log('Creating task:', formData);
-
-    // Redirect back to tasks page
-    router.push('/tasks');
+    try {
+      await api.post('/tasks', formData);
+      router.push('/tasks');
+    } catch (error) {
+      console.error('Failed to create task', error);
+      // You might want to show an error toast here
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const addTag = () => {
@@ -124,6 +157,50 @@ function NewTaskForm() {
                     rows={4}
                   />
                 </div>
+
+                {/* Project and Assignee (For Team Leaders and Co-operators acting as TLs) */}
+                {(user?.role === 'team-leader' || user?.role === 'co-operator') && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Project</Label>
+                      <Select
+                        value={formData.projectId}
+                        onValueChange={handleProjectChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Project" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {projects.map(project => (
+                            <SelectItem key={project._id} value={project._id}>
+                              {project.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Assign To</Label>
+                      <Select
+                        value={formData.assignedTo}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, assignedTo: value }))}
+                        disabled={!formData.projectId}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Member" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {projectMembers.map((member: any) => (
+                            <SelectItem key={member._id} value={member._id}>
+                              {member.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
 
                 {/* Status and Priority */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -254,8 +331,8 @@ function NewTaskForm() {
                         formData.status === 'done' ? 'Done' : 'Cancelled'}
                   </Badge>
                   <Badge className={`${formData.priority === 'urgent' ? 'bg-red-500' :
-                      formData.priority === 'high' ? 'bg-orange-500' :
-                        formData.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
+                    formData.priority === 'high' ? 'bg-orange-500' :
+                      formData.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
                     } text-white border-0`}>
                     {formData.priority}
                   </Badge>

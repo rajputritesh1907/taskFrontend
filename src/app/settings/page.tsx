@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -36,12 +45,25 @@ import {
   Github,
   Twitter,
   Linkedin,
-  Database
+  Database,
+  Users,
+  Plus
 } from 'lucide-react';
 import { useTheme } from '@/lib/theme-context';
-
+import { useAuth } from '@/context/auth-context';
+import api from '@/lib/api';
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
+  const { user } = useAuth();
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'co-operator'
+  });
+
   const [settings, setSettings] = useState({
     profile: {
       name: 'John Doe',
@@ -101,6 +123,49 @@ export default function SettingsPage() {
     { id: 'preferences', label: 'Preferences', icon: Shield },
     { id: 'data', label: 'Data Management', icon: Database },
   ];
+
+  if (user?.role === 'manager') {
+    sidebarItems.splice(1, 0, { id: 'team', label: 'Team Management', icon: Users });
+  }
+
+  useEffect(() => {
+    if (activeTab === 'team' && user?.role === 'manager') {
+      const fetchTeam = async () => {
+        try {
+          const tlRes = await api.get('/users?role=team-leader');
+          const coRes = await api.get('/users?role=co-operator');
+          setTeamMembers([...tlRes.data, ...coRes.data]);
+        } catch (error) {
+          console.error('Failed to fetch team', error);
+        }
+      };
+      fetchTeam();
+    }
+  }, [activeTab, user]);
+
+  const handleRemoveUser = async (userId: string) => {
+    if (confirm('Are you sure you want to remove this user? They will be notified via email.')) {
+      try {
+        await api.delete(`/users/${userId}`);
+        setTeamMembers(prev => prev.filter(m => m._id !== userId));
+      } catch (error) {
+        console.error('Failed to remove user', error);
+      }
+    }
+  };
+
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const { data } = await api.post('/users', newUser);
+      setTeamMembers(prev => [...prev, data]);
+      setIsAddUserOpen(false);
+      setNewUser({ name: '', email: '', password: '', role: 'co-operator' });
+    } catch (error) {
+      console.error('Failed to add user', error);
+      alert('Failed to add user. Please check the inputs.');
+    }
+  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -518,6 +583,114 @@ export default function SettingsPage() {
                   <Trash2 className="h-4 w-4 mr-2" />
                   Delete Account
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      case 'team':
+        return (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Team Management
+              </CardTitle>
+              <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Member
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New Team Member</DialogTitle>
+                    <DialogDescription>
+                      Create a new account for a Team Leader or Co-operator.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleAddUser} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Name</Label>
+                      <Input
+                        id="name"
+                        value={newUser.name}
+                        onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={newUser.email}
+                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={newUser.password}
+                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="role">Role</Label>
+                      <Select
+                        value={newUser.role}
+                        onValueChange={(value) => setNewUser({ ...newUser, role: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="team-leader">Team Leader</SelectItem>
+                          <SelectItem value="co-operator">Co-operator</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit">Create Account</Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                {teamMembers.map((member) => (
+                  <div key={member._id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-bold text-gray-500">
+                        {member.name.charAt(0)}
+                      </div>
+                      <div>
+                        <h4 className="font-medium">{member.name}</h4>
+                        <p className="text-sm text-gray-500">{member.email}</p>
+                        <Badge variant="outline" className="mt-1">
+                          {member.role}
+                        </Badge>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => handleRemoveUser(member._id)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+                {teamMembers.length === 0 && (
+                  <p className="text-center text-gray-500 py-8">No team members found.</p>
+                )}
               </div>
             </CardContent>
           </Card>

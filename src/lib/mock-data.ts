@@ -2,6 +2,7 @@ import { Task, DashboardStats, CategoryStats, TeamMember } from './types';
 
 export const mockTasks: Task[] = [
   {
+    _id: '1',
     id: '1',
     title: 'Design user authentication flow',
     description: 'Create wireframes and mockups for the login/signup process',
@@ -14,6 +15,7 @@ export const mockTasks: Task[] = [
     tags: ['UI/UX', 'Authentication']
   },
   {
+    _id: '2',
     id: '2',
     title: 'Implement API endpoints',
     description: 'Build REST API for task management',
@@ -26,6 +28,7 @@ export const mockTasks: Task[] = [
     tags: ['API', 'Backend']
   },
   {
+    _id: '3',
     id: '3',
     title: 'Write unit tests',
     description: 'Add comprehensive test coverage for components',
@@ -38,6 +41,7 @@ export const mockTasks: Task[] = [
     tags: ['Testing', 'Quality']
   },
   {
+    _id: '4',
     id: '4',
     title: 'Update documentation',
     description: 'Refresh README and API documentation',
@@ -50,6 +54,7 @@ export const mockTasks: Task[] = [
     tags: ['Docs']
   },
   {
+    _id: '5',
     id: '5',
     title: 'Optimize database queries',
     description: 'Improve performance of slow queries',
@@ -62,6 +67,7 @@ export const mockTasks: Task[] = [
     tags: ['Performance', 'Database']
   },
   {
+    _id: '6',
     id: '6',
     title: 'Mobile responsive fixes',
     description: 'Fix layout issues on mobile devices',

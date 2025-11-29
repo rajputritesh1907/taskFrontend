@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,51 +22,142 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  PlayCircle
+  PlayCircle,
+  PauseCircle,
+  Loader2,
+  Trash2
 } from 'lucide-react';
-import { mockTasks } from '@/lib/mock-data';
-import { Task, Status, Priority } from '@/lib/types';
+import { useEffect, useState, useMemo } from 'react';
+import api from '@/lib/api';
+import { useAuth } from '@/context/auth-context';
+import { Task, Status, Priority, Project } from '@/lib/types';
 import { format } from 'date-fns';
 import Link from 'next/link';
 
 export default function TasksPage() {
+  const { user } = useAuth();
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<Status | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<Status | 'all' | 'active' | 'completed' | 'on-hold'>('all');
   const [priorityFilter, setPriorityFilter] = useState<Priority | 'all'>('all');
-  const [sortBy, setSortBy] = useState<'dueDate' | 'createdAt' | 'priority'>('dueDate');
+  const [sortBy, setSortBy] = useState<'dueDate' | 'createdAt' | 'priority' | 'deadline'>('dueDate');
+  const [currentDate, setCurrentDate] = useState(new Date());
 
-  const filteredAndSortedTasks = useMemo(() => {
-    let filtered = mockTasks.filter(task => {
-      const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        task.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        task.category?.toLowerCase().includes(searchQuery.toLowerCase());
-
-      const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
-      const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter;
-
-      return matchesSearch && matchesStatus && matchesPriority;
-    });
-
-    // Sort tasks
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'dueDate':
-          if (!a.dueDate && !b.dueDate) return 0;
-          if (!a.dueDate) return 1;
-          if (!b.dueDate) return -1;
-          return a.dueDate.getTime() - b.dueDate.getTime();
-        case 'createdAt':
-          return b.createdAt.getTime() - a.createdAt.getTime();
-        case 'priority':
-          const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-          return priorityOrder[b.priority] - priorityOrder[a.priority];
-        default:
-          return 0;
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        if (user?.role === 'manager') {
+          const { data } = await api.get('/projects');
+          const projectsWithDates = data.map((project: any) => ({
+            ...project,
+            deadline: project.deadline ? new Date(project.deadline) : undefined,
+            createdAt: new Date(project.createdAt),
+            updatedAt: new Date(project.updatedAt)
+          }));
+          setProjects(projectsWithDates);
+        } else {
+          const { data } = await api.get('/tasks');
+          const tasksWithDates = data.map((task: any) => ({
+            ...task,
+            dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
+            createdAt: new Date(task.createdAt),
+            updatedAt: new Date(task.updatedAt)
+          }));
+          setTasks(tasksWithDates);
+        }
+      } catch (error) {
+        console.error('Failed to fetch data', error);
+      } finally {
+        setIsLoading(false);
       }
-    });
+    };
 
-    return filtered;
-  }, [searchQuery, statusFilter, priorityFilter, sortBy]);
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
+
+  const handleDeleteProject = async (e: React.MouseEvent, projectId: string) => {
+    e.stopPropagation(); // Prevent card click
+    if (confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
+      try {
+        await api.delete(`/projects/${projectId}`);
+        setProjects(prev => prev.filter(p => p._id !== projectId));
+      } catch (error) {
+        console.error('Failed to delete project', error);
+      }
+    }
+  };
+
+  const handleProjectStatus = async (e: React.MouseEvent, projectId: string, newStatus: 'active' | 'on-hold') => {
+    e.stopPropagation();
+    try {
+      const { data } = await api.put(`/projects/${projectId}`, { status: newStatus });
+      setProjects(prev => prev.map(p => p._id === projectId ? { ...p, status: newStatus } : p));
+    } catch (error) {
+      console.error('Failed to update project status', error);
+    }
+  };
+
+  const filteredAndSortedItems = useMemo(() => {
+    if (user?.role === 'manager') {
+      let filtered = projects.filter(project => {
+        const matchesSearch = project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          project.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
+        const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
+
+        return matchesSearch && matchesStatus;
+      });
+
+      filtered.sort((a, b) => {
+        switch (sortBy) {
+          case 'deadline':
+          case 'dueDate':
+            if (!a.deadline && !b.deadline) return 0;
+            if (!a.deadline) return 1;
+            if (!b.deadline) return -1;
+            return a.deadline.getTime() - b.deadline.getTime();
+          case 'createdAt':
+            return b.createdAt.getTime() - a.createdAt.getTime();
+          default:
+            return 0;
+        }
+      });
+      return filtered;
+    } else {
+      let filtered = tasks.filter(task => {
+        const matchesSearch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          task.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          task.category?.toLowerCase().includes(searchQuery.toLowerCase());
+
+        const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
+        const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter;
+
+        return matchesSearch && matchesStatus && matchesPriority;
+      });
+
+      filtered.sort((a, b) => {
+        switch (sortBy) {
+          case 'dueDate':
+            if (!a.dueDate && !b.dueDate) return 0;
+            if (!a.dueDate) return 1;
+            if (!b.dueDate) return -1;
+            return a.dueDate.getTime() - b.dueDate.getTime();
+          case 'createdAt':
+            return b.createdAt.getTime() - a.createdAt.getTime();
+          case 'priority':
+            const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
+            return priorityOrder[b.priority] - priorityOrder[a.priority];
+          default:
+            return 0;
+        }
+      });
+      return filtered;
+    }
+  }, [tasks, projects, searchQuery, statusFilter, priorityFilter, sortBy, user]);
 
   const getPriorityColor = (priority: Priority) => {
     switch (priority) {
@@ -102,18 +193,27 @@ export default function TasksPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-            All Tasks
+            {user?.role === 'manager' ? 'All Projects' : 'All Tasks'}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Manage and track all your tasks in one place.
+            {user?.role === 'manager' ? 'Manage and track all projects.' : 'Manage and track all your tasks in one place.'}
           </p>
         </div>
-        <Button asChild className="w-full sm:w-auto">
-          <Link href="/tasks/new">
-            <Plus className="h-4 w-4 mr-2" />
-            New Task
-          </Link>
-        </Button>
+        {user?.role === 'manager' ? (
+          <Button asChild className="w-full sm:w-auto">
+            <Link href="/projects/new">
+              <Plus className="h-4 w-4 mr-2" />
+              New Project
+            </Link>
+          </Button>
+        ) : (
+          <Button asChild className="w-full sm:w-auto">
+            <Link href="/tasks/new">
+              <Plus className="h-4 w-4 mr-2" />
+              New Task
+            </Link>
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
@@ -134,42 +234,56 @@ export default function TasksPage() {
                 </div>
 
                 {/* Status Filter */}
-                <Select value={statusFilter} onValueChange={(value: Status | 'all') => setStatusFilter(value)}>
+                <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
                   <SelectTrigger className="w-full lg:w-40">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="todo">To Do</SelectItem>
-                    <SelectItem value="in-progress">In Progress</SelectItem>
-                    <SelectItem value="done">Done</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    {user?.role === 'manager' ? (
+                      <>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="on-hold">On Hold</SelectItem>
+                      </>
+                    ) : (
+                      <>
+                        <SelectItem value="todo">To Do</SelectItem>
+                        <SelectItem value="in-progress">In Progress</SelectItem>
+                        <SelectItem value="done">Done</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
 
-                {/* Priority Filter */}
-                <Select value={priorityFilter} onValueChange={(value: Priority | 'all') => setPriorityFilter(value)}>
-                  <SelectTrigger className="w-full lg:w-40">
-                    <SelectValue placeholder="Priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Priority</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                  </SelectContent>
-                </Select>
+                {/* Priority Filter - Hide for managers */}
+                {user?.role !== 'manager' && (
+                  <Select value={priorityFilter} onValueChange={(value: Priority | 'all') => setPriorityFilter(value)}>
+                    <SelectTrigger className="w-full lg:w-40">
+                      <SelectValue placeholder="Priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Priority</SelectItem>
+                      <SelectItem value="urgent">Urgent</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="low">Low</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
 
                 {/* Sort */}
-                <Select value={sortBy} onValueChange={(value: 'dueDate' | 'createdAt' | 'priority') => setSortBy(value)}>
+                <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
                   <SelectTrigger className="w-full lg:w-40">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="dueDate">Due Date</SelectItem>
+                    <SelectItem value={user?.role === 'manager' ? "deadline" : "dueDate"}>
+                      {user?.role === 'manager' ? "Deadline" : "Due Date"}
+                    </SelectItem>
                     <SelectItem value="createdAt">Created</SelectItem>
-                    <SelectItem value="priority">Priority</SelectItem>
+                    {user?.role !== 'manager' && <SelectItem value="priority">Priority</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>
@@ -178,69 +292,135 @@ export default function TasksPage() {
 
           {/* Task List */}
           <div className="space-y-3">
-            {filteredAndSortedTasks.length === 0 ? (
+            {filteredAndSortedItems.length === 0 ? (
               <Card>
                 <CardContent className="p-12 text-center">
                   <div className="text-gray-400 mb-4">
                     <Search className="h-12 w-12 mx-auto" />
                   </div>
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    No tasks found
+                    {user?.role === 'manager' ? 'No projects found' : 'No tasks found'}
                   </h3>
                   <p className="text-gray-600 dark:text-gray-400">
-                    Try adjusting your filters or create a new task.
+                    Try adjusting your filters{user?.role !== 'manager' && ' or create a new task'}.
                   </p>
                 </CardContent>
               </Card>
             ) : (
-              filteredAndSortedTasks.map((task) => (
-                <Card key={task.id} className="hover:shadow-md transition-shadow cursor-pointer hover-lift animate-fade-in">
+              filteredAndSortedItems.map((item: any) => (
+                <Card key={item._id} className="hover:shadow-md transition-shadow cursor-pointer hover-lift animate-fade-in">
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-4 flex-1">
                         <div className="mt-1">
-                          {getStatusIcon(task.status)}
+                          {user?.role === 'manager' ? (
+                            <div className={`w-4 h-4 rounded-full ${item.status === 'active' ? 'bg-blue-500' : item.status === 'completed' ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                          ) : (
+                            getStatusIcon(item.status)
+                          )}
                         </div>
 
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-lg text-gray-900 dark:text-white mb-2">
-                            {task.title}
+                            {item.title}
                           </h3>
 
-                          {task.description && (
+                          {item.description && (
                             <p className="text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
-                              {task.description}
+                              {item.description}
                             </p>
                           )}
 
                           <div className="flex flex-wrap items-center gap-2">
-                            <Badge className={getStatusColor(task.status)}>
-                              {task.status.replace('-', ' ')}
+                            <Badge variant="outline">
+                              {item.status.replace('-', ' ')}
                             </Badge>
 
-                            <Badge className={`${getPriorityColor(task.priority)} text-white border-0`}>
-                              {task.priority}
-                            </Badge>
-
-                            {task.category && (
-                              <Badge variant="outline">
-                                {task.category}
+                            {user?.role !== 'manager' && (
+                              <Badge className={`${getPriorityColor(item.priority)} text-white border-0`}>
+                                {item.priority}
                               </Badge>
                             )}
 
-                            {task.dueDate && (
+                            {item.category && (
+                              <Badge variant="outline">
+                                {item.category}
+                              </Badge>
+                            )}
+
+                            {(item.dueDate || item.deadline) && (
                               <div className="flex items-center gap-1 text-sm text-gray-500">
                                 <Calendar className="h-3 w-3" />
-                                {format(task.dueDate, 'MMM dd, yyyy')}
+                                {format(item.dueDate || item.deadline, 'MMM dd, yyyy')}
+                              </div>
+                            )}
+
+                            {user?.role === 'manager' && item.teamLeader && (
+                              <div className="flex flex-col gap-2 mt-2">
+                                <div className="text-sm text-gray-500">
+                                  Leader: <span className="font-medium text-gray-900 dark:text-gray-300">{item.teamLeader.name}</span>
+                                </div>
+                                {item.members && item.members.length > 0 && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-500">Team:</span>
+                                    <div className="flex -space-x-2">
+                                      {item.members.map((member: any, idx: number) => (
+                                        <div
+                                          key={member._id}
+                                          className="w-6 h-6 rounded-full bg-gray-200 border-2 border-white dark:border-gray-800 flex items-center justify-center text-[10px] font-medium"
+                                          title={member.name}
+                                        >
+                                          {member.name.charAt(0)}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
                         </div>
                       </div>
 
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-2">
+                        {user?.role === 'manager' && (
+                          <>
+                            {item.status === 'active' ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-yellow-500 hover:text-yellow-600 hover:bg-yellow-50"
+                                onClick={(e) => handleProjectStatus(e, item._id, 'on-hold')}
+                                title="Put On Hold"
+                              >
+                                <PauseCircle className="h-4 w-4" />
+                              </Button>
+                            ) : item.status === 'on-hold' ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                                onClick={(e) => handleProjectStatus(e, item._id, 'active')}
+                                title="Resume Project"
+                              >
+                                <PlayCircle className="h-4 w-4" />
+                              </Button>
+                            ) : null}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                              onClick={(e) => handleDeleteProject(e, item._id)}
+                              title="Delete Project"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                        <Button variant="ghost" size="sm">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -262,10 +442,12 @@ export default function TasksPage() {
                   <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full">
                     <PlayCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <span className="font-medium">In Progress</span>
+                  <span className="font-medium">{user?.role === 'manager' ? 'Active' : 'In Progress'}</span>
                 </div>
                 <span className="font-bold text-lg">
-                  {mockTasks.filter(t => t.status === 'in-progress').length}
+                  {user?.role === 'manager'
+                    ? projects.filter(p => p.status === 'active').length
+                    : tasks.filter(t => t.status === 'in-progress').length}
                 </span>
               </div>
               <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -273,10 +455,12 @@ export default function TasksPage() {
                   <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-full">
                     <Clock className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
                   </div>
-                  <span className="font-medium">To Do</span>
+                  <span className="font-medium">{user?.role === 'manager' ? 'On Hold' : 'To Do'}</span>
                 </div>
                 <span className="font-bold text-lg">
-                  {mockTasks.filter(t => t.status === 'todo').length}
+                  {user?.role === 'manager'
+                    ? projects.filter(p => p.status === 'on-hold').length
+                    : tasks.filter(t => t.status === 'todo').length}
                 </span>
               </div>
               <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -287,25 +471,27 @@ export default function TasksPage() {
                   <span className="font-medium">Completed</span>
                 </div>
                 <span className="font-bold text-lg">
-                  {mockTasks.filter(t => t.status === 'done').length}
+                  {user?.role === 'manager'
+                    ? projects.filter(p => p.status === 'completed').length
+                    : tasks.filter(t => t.status === 'done').length}
                 </span>
               </div>
             </CardContent>
-          </Card>
+          </Card >
 
           {/* Calendar Preview */}
-          <Card>
+          < Card >
             <CardHeader>
               <CardTitle>Calendar</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-center p-4 border rounded-lg bg-gray-50 dark:bg-gray-800/50">
                 <div className="flex items-center justify-between mb-4">
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}>
                     &lt;
                   </Button>
-                  <span className="font-medium">December 2024</span>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <span className="font-medium">{format(currentDate, 'MMMM yyyy')}</span>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}>
                     &gt;
                   </Button>
                 </div>
@@ -319,28 +505,51 @@ export default function TasksPage() {
                   <div className="text-gray-500">Sa</div>
                 </div>
                 <div className="grid grid-cols-7 gap-1 text-sm">
-                  {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => {
-                    const hasTask = mockTasks.some(t => t.dueDate && t.dueDate.getDate() === day);
+                  {Array.from({ length: new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay() }).map((_, i) => (
+                    <div key={`empty-${i}`} />
+                  ))}
+                  {Array.from({ length: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate() }, (_, i) => i + 1).map((day) => {
+                    const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+                    const itemsOnDate = user?.role === 'manager'
+                      ? projects.filter(p => p.deadline && new Date(p.deadline).toDateString() === date.toDateString())
+                      : tasks.filter(t => t.dueDate && new Date(t.dueDate).toDateString() === date.toDateString());
+
+                    const hasItems = itemsOnDate.length > 0;
+                    const isToday = new Date().toDateString() === date.toDateString();
+
                     return (
                       <div
                         key={day}
                         className={`
-                          aspect-square flex items-center justify-center rounded-full cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700
-                          ${hasTask ? 'bg-blue-100 text-blue-600 font-bold dark:bg-blue-900/30 dark:text-blue-400' : ''}
-                          ${day === new Date().getDate() ? 'border border-blue-500' : ''}
+                          aspect-square flex items-center justify-center rounded-full cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 relative group
+                          ${hasItems ? 'bg-blue-100 text-blue-600 font-bold dark:bg-blue-900/30 dark:text-blue-400' : ''}
+                          ${isToday ? 'border border-blue-500' : ''}
                         `}
                       >
                         {day}
+                        {hasItems && (
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-50 w-48 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 text-xs text-left">
+                            <div className="font-semibold mb-1 border-b pb-1">{format(date, 'MMM dd')}</div>
+                            {itemsOnDate.map((item: any) => (
+                              <div key={item._id} className="mb-1 last:mb-0">
+                                <div className="font-medium truncate">{item.title}</div>
+                                {user?.role === 'manager' && item.teamLeader && (
+                                  <div className="text-gray-500 dark:text-gray-400 truncate">Leader: {item.teamLeader.name}</div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </Card >
 
           {/* Quick Tips */}
-          <Card className="bg-gradient-to-br from-blue-500 to-purple-600 text-white border-0">
+          < Card className="bg-gradient-to-br from-blue-500 to-purple-600 text-white border-0" >
             <CardContent className="p-6">
               <h3 className="font-bold text-lg mb-2">Pro Tip!</h3>
               <p className="text-blue-100 text-sm mb-4">
@@ -350,9 +559,9 @@ export default function TasksPage() {
                 Learn More
               </Button>
             </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
+          </Card >
+        </div >
+      </div >
+    </div >
   );
 }

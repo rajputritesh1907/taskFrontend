@@ -14,10 +14,10 @@ import { KanbanCard } from './kanban-card';
 import Link from 'next/link';
 
 interface KanbanColumnProps {
-  id: Status;
+  id: string;
   title: string;
   color: string;
-  tasks: Task[];
+  tasks: any[];
 }
 
 export function KanbanColumn({ id, title, color, tasks }: KanbanColumnProps) {
@@ -49,9 +49,9 @@ export function KanbanColumn({ id, title, color, tasks }: KanbanColumnProps) {
             ref={setNodeRef}
             className="space-y-3 min-h-[200px]"
           >
-            <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={tasks.map(t => t._id)} strategy={verticalListSortingStrategy}>
               {tasks.map(task => (
-                <KanbanCard key={task.id} task={task} />
+                <KanbanCard key={task._id} task={task} />
               ))}
             </SortableContext>
 
