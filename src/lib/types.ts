@@ -47,7 +47,13 @@ export interface TeamMember {
 export interface DashboardStats {
   totalTasks: number;
   completedTasks: number;
-  avatar: string;
-  status: 'online' | 'offline' | 'busy' | 'away';
-  lastActive?: Date;
+  inProgressTasks: number;
+  overdueTasks: number;
+  completionRate: number;
+}
+
+export interface CategoryStats {
+  name: string;
+  count: number;
+  color: string;
 }

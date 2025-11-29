@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
     }
 
     const newTask: Task = {
+      _id: Date.now().toString(),
       id: Date.now().toString(),
       title: title.trim(),
       description: description?.trim(),

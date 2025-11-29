@@ -117,8 +117,7 @@ export const mockTeamMembers: TeamMember[] = [
     name: 'Mike Ross',
     role: 'Backend Dev',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike',
-    status: 'offline',
-    lastActive: new Date('2024-12-10T10:00:00')
+    status: 'offline'
   },
   {
     id: '4',
