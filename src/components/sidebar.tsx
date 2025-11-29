@@ -8,12 +8,9 @@ import {
   CheckSquare,
   KanbanSquare,
   Settings,
-  Moon,
-  Sun,
   Plus,
   LogOut
 } from 'lucide-react';
-import { useTheme } from '@/lib/theme-context';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 
@@ -26,7 +23,6 @@ const navigation = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { theme, toggleTheme, mounted } = useTheme();
   const { logout, user } = useAuth();
 
   return (
@@ -85,20 +81,6 @@ export function Sidebar() {
           New Task
         </Button>
 
-        {/* Theme Toggle */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={toggleTheme}
-          className="w-full justify-start gap-3"
-        >
-          {mounted && theme === 'light' ? (
-            <Moon className="h-4 w-4" />
-          ) : (
-            <Sun className="h-4 w-4" />
-          )}
-          {mounted && theme === 'light' ? 'Dark Mode' : 'Light Mode'}
-        </Button>
 
         {/* Logout Button */}
         <Button

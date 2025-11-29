@@ -49,11 +49,9 @@ import {
   Users,
   Plus
 } from 'lucide-react';
-import { useTheme } from '@/lib/theme-context';
 import { useAuth } from '@/context/auth-context';
 import api from '@/lib/api';
 export default function SettingsPage() {
-  const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
@@ -350,22 +348,6 @@ export default function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-base">Theme</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Choose your preferred theme
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Badge variant={theme === 'light' ? 'default' : 'secondary'}>
-                    {theme === 'light' ? 'Light' : 'Dark'}
-                  </Badge>
-                  <Button variant="outline" size="sm" onClick={toggleTheme}>
-                    Switch to {theme === 'light' ? 'Dark' : 'Light'}
-                  </Button>
-                </div>
-              </div>
 
               <Separator />
 
